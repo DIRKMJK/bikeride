@@ -5,8 +5,8 @@ HERE = pathlib.Path(__file__).parent
 README = (HERE / "readme.md").read_text()
 
 
-setup(name='bikeride',
-    version='0.0.0',
+setup(name='pybikeride',
+    version='0.0.1',
     description='Analyse and plot gps files of bicycle rides',
     long_description=README,
     long_description_content_type="text/markdown",
@@ -16,7 +16,7 @@ setup(name='bikeride',
     license="MIT",
     packages=['bikeride'],
     install_requires=[
-        'dateutil', 'pandas', 'numpy', 'geopy',
+        'python-dateutil', 'pandas', 'numpy', 'geopy',
         'fitparse', 'bs4', 'ipyleaflet'
     ],
     zip_safe=False)

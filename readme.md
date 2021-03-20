@@ -10,6 +10,12 @@ The package was created for analysing bicycle rides, but you can also use it for
 - There may be differences in how bicycle computers record data. Many Garmin devices let you choose between [smart recording][smart] and recording every second. I haven’t tested every second recording, but this may lead to large errors in direction, relative wind direction and gradient (in fact, data for gradients may show large errors even with ‘smart’ recording).
 - At this point, the difference between horizontal distance and distance traveled hasn’t been taken into account. As a result, on a hilly ride, `length_recorded` may be a bit longer than `length_calculated` (which is based on gps coordinates).
 
+# Installation
+
+```
+pip install pybikeride
+```
+
 # Examples
 
 ## Create a BikeRide object
