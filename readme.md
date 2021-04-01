@@ -1,6 +1,6 @@
 The bikeride package is a tool for analysing gps files of bicycle rides. It creates segments, and for each segment it stores data like length, duration, and the direction you’re heading. If you provide a csv file with weather data, it will add weather data to the segments and calculate the direction of the wind relative to the direction of the bicycle. It calculates summary statistics for the entire ride and it will let you plot a ride or segments of a ride on a map.
 
-The package was created for analysing bicycle rides, but you can also use it for other activity types.
+The package was created for analysing bicycle rides (more specifically: for an [analysis of wind and cycling speed][article]), but you can also use it for other activity types.
 
 # Caveats
 
@@ -178,3 +178,4 @@ If you want to compare the route of two or more rides, you can set `how` to `rid
 - Perhaps add an option to create cleaned-up ride stats, disregarding outlier segments
 
 [smart]:https://support.garmin.com/en-US/?faq=s4w6kZmbmK0P6l20SgpW28
+[article]:https://dirkmjk.nl/en/439/wind-crosswinds-and-bicycle-speed
