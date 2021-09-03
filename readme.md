@@ -91,6 +91,28 @@ date,hour,wind_direction,wind_speed,temperature,precipitation_duration
 20210108,23,330,1.0,-2.4,0.0
 ```
 
+## Download weather data
+
+You can use the `get_weather` function to download historical weather data for a specified location:
+
+```python
+from bikeride import get_weather
+
+lat = 52.318
+lon = 4.790
+api_key = 'xxx'
+start = '20100101'
+end = '20210902'
+
+df = get_weather('knmi', lat, lon, start, end)
+df = get_weather('oikolab', lat, lon, start, end, api_key)
+```
+
+Currently, two sources can be used:
+
+- The Dutch meteorological institute KNMI, which provides data from weather stations in the Netherlands. No need to pass an api key. Note that there is an unspecified maximum amount of data that can be requested in one call; it appears that you will hit this maximum if you request over ten years of data at a time. KNMI uses Dutch date and time; `get_weather` converts this to UTC.
+- Oikolab, which provides global data. Information about how their data is generated can be found [here][oikolab]. In order to get oikolab data you need to request an api key; oikolab currently offers a free plan allowing up to 100 calls per month.
+
 ## Truncate ride
 
 If you want to analyse only a part of the ride, as defined by a starting and end point, you can pass a `limits` parameter to the BikeRide object. This is a list or tuple containing start location, end location and a threshold distance in metres. The threshold distance is used to determine whether the route passed the start or end point.
@@ -174,8 +196,8 @@ If you want to compare the route of two or more rides, you can set `how` to `rid
 
 # Todo
 
-- Add function to download weather data
 - Perhaps add an option to create cleaned-up ride stats, disregarding outlier segments
 
 [smart]:https://support.garmin.com/en-US/?faq=s4w6kZmbmK0P6l20SgpW28
 [article]:https://dirkmjk.nl/en/439/wind-crosswinds-and-bicycle-speed
+[oikolab]:https://docs.oikolab.com/#5-frequently-asked-questions

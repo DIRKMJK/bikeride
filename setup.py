@@ -6,7 +6,7 @@ README = (HERE / "readme.md").read_text()
 
 
 setup(name='pybikeride',
-    version='0.0.1',
+    version='0.0.2',
     description='Analyse and plot gps files of bicycle rides',
     long_description=README,
     long_description_content_type="text/markdown",
