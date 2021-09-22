@@ -13,7 +13,6 @@ from ipyleaflet import Map, Polyline
 
 class BikeRide():
     """Process and store records, segments and metadata from gps file.
-
     Optionally add data from weather file.
     """
     def __init__(self, path_ride, path_weather=None, limits=None, filetype=None,
@@ -200,35 +199,58 @@ class BikeRide():
         """Read data from csv containing weather data."""
         if not self.path_weather:
             return None
-        return pd.read_csv(self.path_weather)
+        weather = pd.read_csv(self.path_weather)
+        dt_vars = [
+            var for var in ['date', 'hour', 'minute']
+            if var in list(weather.columns)
+        ]
+        weather = weather.sort_values(by=dt_vars)
+        return weather
 
 
     def add_weather(self, segment):
         """Add weather data to segment."""
         weather = self.weather
         timestamp = segment['timestamp_start']
-        date = timestamp.strftime('%Y%m%d')
-        hour = timestamp.strftime('%H')
-        minute = timestamp.strftime('%S')
+
+        date = int(timestamp.strftime('%Y%m%d'))
+        hour = int(timestamp.strftime('%H'))
+        minute = int(timestamp.strftime('%S'))
         if 'minute' in weather.columns:
             subset_weather = weather[
-                (weather.date == int(date)) &
-                (weather.hour == int(hour)) &
-                (weather.minute == int(minute))
+                (weather.date == date) &
+                (weather.hour == hour) &
+                (weather.minute == minute)
             ]
         elif 'hour' in weather.columns:
+            t1 = timestamp + pd.Timedelta(hours=1)
+            h1 = int(t1.strftime('%H'))
             subset_weather = weather[
-                (weather.date == int(date)) &
-                (weather.hour == int(hour))
+                (weather.date == date) &
+                (weather.hour.isin([hour, h1]))
             ]
         else:
             subset_weather = weather[
                 (weather.date == date)
             ]
-        for _, row in subset_weather.iterrows():
+        if subset_weather.empty:
+            return segment
+        if 'hour' in weather.columns and 'minute' not in weather.columns:
             for col in weather.columns:
-                segment[col] = row[col]
-            break
+                if col.startswith('Unnamed'):
+                    continue
+                values = list(subset_weather[col])
+                try:
+                    value = (60 - minute) * values[0] + minute * values[-1]
+                    value /= 60
+                except TypeError:
+                    value = values[0]
+                segment[col] = value
+        else:
+            for _, row in subset_weather.iterrows():
+                for col in weather.columns:
+                    segment[col] = row[col]
+                break
         if 'wind_direction' in segment:
             wind_direction = segment['wind_direction']
             heading = segment['heading']

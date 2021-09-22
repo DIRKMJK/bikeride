@@ -1,11 +1,8 @@
 """Download hourly weather data from Royal Dutch Meteorological Institute"""
 
 import math
-import locale
-import datetime
 import requests
 import pandas as pd
-import pytz
 
 
 URL = 'https://www.daggegevens.knmi.nl/klimatologie/uurgegevens'
@@ -14,8 +11,8 @@ RENAME_COLS = {
     'YYYYMMDD': 'date',
     'H': 'hour',
     'DD': 'wind_direction',
-    'FH': 'wind_speed',
-    'FF': 'mean_wind_speed',
+    'FH': 'wind_speed_hr',
+    'FF': 'wind_speed',
     'FX': 'maximum_wind_gust',
     'T': 'temperature',
     'T10N': '',
@@ -38,13 +35,14 @@ RENAME_COLS = {
 }
 ADJUST = [
     'wind_speed',
-    'mean_wind_speed',
+    'wind_speed_hr',
     'maximum_wind_gust',
     'temperature',
     'sunshine_duration',
     'precipitation_duration',
     'hourly_precipitation_amount',
 ]
+
 STATIONS = [
     (209, 4.518, 52.465, 'IJmond'),
     (210, 4.430, 52.171, 'Valkenburg Zh'),
@@ -112,18 +110,6 @@ def get_station(lat_loc, lon_loc):
     return nearest_station
 
 
-
-def to_utc(date, hour):
-    """Convert hour to UTC"""
-    date = int(date)
-    hour = int(hour)
-    dt = datetime.datetime.strptime('{} {}'.format(date, hour), '%Y%m%d %H')
-    utc_dt = dt.astimezone(pytz.utc)
-    date = utc_dt.strftime('%Y%m%d')
-    hour = utc_dt.strftime('%H')
-    return date, hour
-
-
 def process_knmi(text):
     """Process response text from KNMI"""
     lines = text.split('\n')
@@ -147,23 +133,12 @@ def process_knmi(text):
     for var in ADJUST:
         df[var] = df[var].apply(int)
         df[var] /= 10
-    df['air_pressure'] *= 100
-    df['hour'] = df.hour.apply(int)
-    df['hour'] -= 1
-    dates_utc = []
-    hrs_utc = []
-    for date, hour in zip(df.date, df.hour):
-        date_utc, hour_utc = to_utc(date, hour)
-        dates_utc.append(date_utc)
-        hrs_utc.append(hour_utc)
-    df['date'] = dates_utc
-    df['hour'] = hrs_utc
+    df['air_pressure'] = 100 * df.air_pressure.apply(float)
     return df
 
 
 def get_knmi(lat, lon, start, end):
     """Download hourly weather data from KNMI"""
-    locale.setlocale(locale.LC_ALL, 'nl_NL')
     station_id, station_name, lat, lon = get_station(lat, lon)
     print(f'Using station {station_id} {station_name} {lat},{lon}')
     data = f'start={start}01&end={end}24&stns={station_id}'

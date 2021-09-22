@@ -110,7 +110,7 @@ df = get_weather('oikolab', lat, lon, start, end, api_key)
 
 Currently, two sources can be used:
 
-- The Dutch meteorological institute KNMI, which provides data from weather stations in the Netherlands. No need to pass an api key. Note that there is an unspecified maximum amount of data that can be requested in one call; it appears that you will hit this maximum if you request over ten years of data at a time. KNMI uses Dutch date and time; `get_weather` converts this to UTC.
+- The Dutch meteorological institute KNMI, which provides data from weather stations in the Netherlands. No need to pass an api key. Note that there is an unspecified maximum amount of data that can be requested in one call; it appears that you will hit this maximum if you request over ten years of data at a time.
 - Oikolab, which provides global data. Information about how their data is generated can be found [here][oikolab]. In order to get oikolab data you need to request an api key; oikolab currently offers a free plan allowing up to 100 calls per month.
 
 ## Truncate ride
