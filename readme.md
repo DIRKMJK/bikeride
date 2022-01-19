@@ -65,14 +65,6 @@ Here‘s an example of what a weather file might look like:
 
 ```
 date,hour,wind_direction,wind_speed,temperature,precipitation_duration
-20210108,0,300,2.0,2.8,0.0
-20210108,1,300,3.0,3.0,1.0
-20210108,2,310,2.0,2.7,0.8
-20210108,3,270,2.0,2.7,0.0
-20210108,4,310,1.0,2.0,0.0
-20210108,5,310,2.0,2.0,0.0
-20210108,6,340,1.0,1.8,0.0
-20210108,7,340,1.0,2.2,0.0
 20210108,8,10,1.0,2.7,0.0
 20210108,9,30,2.0,3.6,0.0
 20210108,10,50,3.0,3.8,0.0
@@ -82,36 +74,7 @@ date,hour,wind_direction,wind_speed,temperature,precipitation_duration
 20210108,14,20,2.0,2.9,0.0
 20210108,15,340,1.0,2.0,0.0
 20210108,16,320,1.0,1.1,0.0
-20210108,17,300,1.0,0.5,0.0
-20210108,18,300,1.0,-0.9,0.0
-20210108,19,280,1.0,-1.8,0.0
-20210108,20,0,1.0,-0.9,0.0
-20210108,21,0,1.0,-0.4,0.0
-20210108,22,290,1.0,-2.2,0.0
-20210108,23,330,1.0,-2.4,0.0
 ```
-
-## Download weather data
-
-You can use the `get_weather` function to download historical weather data for a specified location:
-
-```python
-from bikeride import get_weather
-
-lat = 52.318
-lon = 4.790
-api_key = 'xxx'
-start = '20100101'
-end = '20210902'
-
-df = get_weather('knmi', lat, lon, start, end)
-df = get_weather('oikolab', lat, lon, start, end, api_key)
-```
-
-Currently, two sources can be used:
-
-- The Dutch meteorological institute KNMI, which provides data from weather stations in the Netherlands. No need to pass an api key. Note that there is an unspecified maximum amount of data that can be requested in one call; it appears that you will hit this maximum if you request over ten years of data at a time.
-- Oikolab, which provides global data. Information about how their data is generated can be found [here][oikolab]. In order to get oikolab data you need to request an api key; oikolab currently offers a free plan allowing up to 100 calls per month.
 
 ## Truncate ride
 
@@ -194,6 +157,29 @@ plot_rides(rides, how='direction')
 
 If you want to compare the route of two or more rides, you can set `how` to `ride`.  Of course, if you plot a larger number of rides, the map may become messy.
 
+## Download weather data
+
+You can use the `get_weather` function to download historical weather data for a specified location:
+
+```python
+from bikeride import get_weather
+
+lat = 52.318
+lon = 4.790
+api_key = 'xxx'
+start = '20100101'
+end = '20210902'
+
+df = get_weather('knmi', lat, lon, start, end)
+df = get_weather('oikolab', lat, lon, start, end, api_key)
+```
+
+Currently, two sources can be used:
+
+- The Dutch meteorological institute KNMI, which provides data from weather stations in the Netherlands. No need to pass an api key. Note that there is an unspecified maximum amount of data that can be requested in one call; it appears that you will hit this maximum if you request over ten years of data at a time.
+- Oikolab, which provides global data. Information about how their data is generated can be found [here][oikolab]. In order to get oikolab data you need to request an api key; oikolab currently offers a pay-as-you-go plan which will let you download 5,000 units per month for free, with one unit corresponding to one month of data for one variable at one location.
+
+
 # Todo
 
 - Perhaps add an option to create cleaned-up ride stats, disregarding outlier segments
@@ -201,3 +187,4 @@ If you want to compare the route of two or more rides, you can set `how` to `rid
 [smart]:https://support.garmin.com/en-US/?faq=s4w6kZmbmK0P6l20SgpW28
 [article]:https://dirkmjk.nl/en/439/wind-crosswinds-and-bicycle-speed
 [oikolab]:https://docs.oikolab.com/#5-frequently-asked-questions
+

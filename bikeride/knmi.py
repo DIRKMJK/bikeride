@@ -3,6 +3,7 @@
 import math
 import requests
 import pandas as pd
+import geopy.distance
 
 
 URL = 'https://www.daggegevens.knmi.nl/klimatologie/uurgegevens'
@@ -101,13 +102,18 @@ def get_station(lat_loc, lon_loc):
     """Find nearest station for location"""
     shortest_distance = math.inf
     for station_id, lon_st, lat_st, station_name in STATIONS:
-        x = lon_st - lon_loc
-        y = lat_st - lat_loc
-        distance = math.sqrt(x**2 + y**2)
+        distance = geopy.distance.distance((lat_loc, lon_loc), (lat_st, lon_st))
         if distance < shortest_distance:
             nearest_station = station_id, station_name, lat_st, lon_st
             shortest_distance = distance
     return nearest_station
+
+
+def add_day(date):
+    """Add day to date"""
+    dt = pd.to_datetime(date, format='%Y%m%d')
+    dt += pd.Timedelta(days=1)
+    return dt.strftime('%Y%m%d')
 
 
 def process_knmi(text):
@@ -130,6 +136,11 @@ def process_knmi(text):
     df.columns = [c.strip() for c in df.columns]
     rename_cols = {k: v for k, v in RENAME_COLS.items() if v != ''}
     df = df.rename(columns=rename_cols)
+    mask = df.hour == '24'
+    df.loc[mask, 'date'] = df.loc[mask, 'date'].apply(add_day)
+    df.loc[mask, 'hour'] = '00'
+    mask = df.wind_direction.isin(['0', '990'])
+    df.loc[mask, 'wind_direction'] = None
     for var in ADJUST:
         df[var] = df[var].apply(int)
         df[var] /= 10

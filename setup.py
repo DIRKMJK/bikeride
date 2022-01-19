@@ -6,7 +6,7 @@ README = (HERE / "readme.md").read_text()
 
 
 setup(name='pybikeride',
-    version='0.0.3',
+    version='0.0.4',
     description='Analyse and plot gps files of bicycle rides',
     long_description=README,
     long_description_content_type="text/markdown",
@@ -17,6 +17,6 @@ setup(name='pybikeride',
     packages=['bikeride'],
     install_requires=[
         'python-dateutil', 'pandas', 'numpy', 'geopy',
-        'fitparse', 'bs4', 'ipyleaflet', 'pytz', 'timezonefinder'
+        'fitparse', 'bs4', 'ipyleaflet'
     ],
     zip_safe=False)
