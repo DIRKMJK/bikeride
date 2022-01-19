@@ -145,7 +145,7 @@ mask = [sgm['twa_rounded_abs'] == 0 for sgm in ride.segments]
 ride.plot(mask=mask)
 ```
 
-# Plot multiple rides
+## Plot multiple rides
 
 The `plot_rides` function lets you plot multiple rides. If you set the `how` parameter to `direction`, it plots lines from the starting points to the median positions of the rides.
 
@@ -187,4 +187,3 @@ Currently, two sources can be used:
 [smart]:https://support.garmin.com/en-US/?faq=s4w6kZmbmK0P6l20SgpW28
 [article]:https://dirkmjk.nl/en/439/wind-crosswinds-and-bicycle-speed
 [oikolab]:https://docs.oikolab.com/#5-frequently-asked-questions
-
