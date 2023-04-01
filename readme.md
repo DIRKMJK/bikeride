@@ -108,6 +108,8 @@ The `ride.summary` property contains summary statistics and metadata for the rid
 - temperature: weighted average temperature (from weather csv)
 - total ascent: sum of positive ascents of segments (m). No smoothing applied
 - total descent: sum of negative ascents of segments (m). No smoothing applied
+- created_by: device used to record activity (Garmin), or author (gpx)
+- errors: errors that may have occurred while parsing the file
 
 When you create a BikeRide object, you can pass a parameter `additional_vars`, which should be a list of variable names that you want to be included in the summary. For example, you could pass `additional_vars=['hourly_precipitation_amount', 'air_pressure']`, provided those variables are in your weather data. If the data is numeric, the weighted average will be used in the ride summary; otherwise the value of the first segment.
 

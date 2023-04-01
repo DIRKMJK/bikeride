@@ -1,0 +1,24 @@
+[build-system]
+requires      = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pybikeride"
+version = "0.0.5"
+description = "Analyse and plot gps files of bicycle rides"
+readme = "README.md"
+authors = [{ name = "dirkmjk", email = "info@dirkmjk.nl" }]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["cycling", "gps", "gpx", "fit", "garmin"]
+dependencies = [
+    'python-dateutil', 'pandas', 'numpy', 'geopy',
+    'fitdecode', 'bs4', 'ipyleaflet'
+]
+
+
+[project.urls]
+Homepage = "https://github.com/DIRKMJK/bikeride"

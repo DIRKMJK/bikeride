@@ -6,7 +6,8 @@ import numpy as np
 import dateutil.parser
 import pandas as pd
 import geopy.distance
-from fitparse import FitFile
+import fitdecode
+from fitdecode.exceptions import FitEOFError, FitHeaderError
 from bs4 import BeautifulSoup as bs
 from ipyleaflet import Map, Polyline
 
@@ -33,7 +34,10 @@ class BikeRide():
         self.limits = limits
         self.filetype = filetype
         self.additional_vars = additional_vars
+        self.errors = set()
         self.sport = None
+        self.file_type = None
+        self.created_by = None
         self.records, self.forward, self.limits_found = self.get_records()
         self.weather = self.read_weather_file()
         self.segments = self.records_to_segments()
@@ -72,37 +76,64 @@ class BikeRide():
         return twa
 
 
-    def process_fit_record(self, record):
+    def process_fit_frame(self, frame):
         """Extract data from record from fit file."""
-        processed_record = {}
-        for record_data in record:
-            value = record_data.value
-            name = record_data.name
-            if name == 'position_lat':
-                processed_record['lat'] = self.to_degree(value)
-            if name == 'position_long':
-                processed_record['lon'] = self.to_degree(value)
-            processed_record[record_data.name] = record_data.value
-        return processed_record
+        record = {
+            field.name: field.value
+            for field
+            in frame
+        }
+        try:
+            position_lat = record['position_lat']
+            if position_lat:
+                record['lat'] = self.to_degree(position_lat)
+            position_long = record['position_long']
+            if position_long:
+                record['lon'] = self.to_degree(position_long)
+        except KeyError:
+            pass
+        return record
 
 
     def fit_path_to_records(self):
         """Extract data from .fit file."""
-        try:
-            fitfile = FitFile(str(self.path_ride))
+        with fitdecode.FitReader(self.path_ride) as fit:
+            frames = []
             try:
-                session = fitfile.get_messages('session')
-                session_data = list(session)[0].get_values()
-                sport = session_data['sport']
-                self.sport = sport
-            except (KeyError, IndexError):
-                pass
-            records = fitfile.get_messages('record')
-            records = [self.process_fit_record(r) for r in records]
-            records = [r for r in records if 'lat' in r]
-            return records
-        except:
-            return []
+                for frame in fit:
+                    frames.append(frame)
+            except (FitEOFError, FitHeaderError) as e:
+                self.errors.add(str(e))
+        records = [
+            frame for frame
+            in frames
+            if frame.frame_type == fitdecode.FIT_FRAME_DATA
+            and frame.name == 'record'
+        ]
+
+        records = [self.process_fit_frame(record) for record in records]
+        records = [r for r in records if 'lat' in r]
+        if not records:
+            self.errors.add('No records found')
+        other = [
+            frame for frame
+            in frames
+            if frame.frame_type == fitdecode.FIT_FRAME_DATA
+            and frame.name != 'record'
+        ]
+        for frame in other:
+            data = {
+                field.name: field.value
+                for field
+                in frame
+            }
+            if 'sport' in data:
+                self.sport = data['sport']
+            if 'type' in data:
+                self.file_type = data['type']
+            if 'garmin_product' in data and not self.created_by:
+                self.created_by = data['garmin_product']
+        return records
 
 
     def trackpoint_to_record(self, trkpt):
@@ -110,8 +141,9 @@ class BikeRide():
         record = {
             'lat': float(trkpt.get('lat')),
             'lon': float(trkpt.get('lon')),
-            'timestamp': dateutil.parser.parse(trkpt.find('time').text)
         }
+        if trkpt.find('time'):
+            record['timestamp'] = dateutil.parser.parse(trkpt.find('time').text)
         elevation = trkpt.find('ele')
         if elevation:
             record['altitude'] = float(elevation.text)
@@ -127,7 +159,12 @@ class BikeRide():
     def gpx_path_to_records(self):
         """Extract data from .gpx file."""
         gpxfile = self.path_ride.read_text()
-        soup = bs(gpxfile, 'lxml')
+        soup = bs(gpxfile, 'xml')
+        author = soup.find('author')
+        try:
+            self.created_by = author.find('text').text
+        except AttributeError:
+            pass
         trackpoints = soup.find_all('trkpt')
         return [self.trackpoint_to_record(trkpt) for trkpt in trackpoints]
 
@@ -176,15 +213,13 @@ class BikeRide():
         elif self.filetype == 'gpx':
             records = self.gpx_path_to_records()
         else:
-            raise Exception('Filetype {} not implemented'.format(self.filetype))
+            raise Exception(f'Filetype {self.filetype} not implemented')
         limits_found = None
         forward = None
         if self.limits:
             records, limits_found, forward = self.truncate(records)
             if not limits_found:
-                message = 'Start or end point not found for {}'
-                message = message.format(path_ride.name)
-                print(message)
+                self.errors.add('Start or end point not found')
         return records, forward, limits_found
 
 
@@ -272,9 +307,6 @@ class BikeRide():
             end = records[i + 1]
             pos_start = (start['lat'], start['lon'])
             pos_end = (end['lat'], end['lon'])
-            timestamp_start = start['timestamp']
-            timestamp_end = end['timestamp']
-            duration = (timestamp_end - timestamp_start).seconds
             length_calculated = geopy.distance.distance(pos_start, pos_end).m
 
             segment = {
@@ -283,12 +315,23 @@ class BikeRide():
                 'lon_start': start['lon'],
                 'lat_end': end['lat'],
                 'lon_end': end['lon'],
-                'duration': duration,
                 'length_calculated': length_calculated,
                 'heading': self.get_bearing(pos_start, pos_end),
-                'timestamp_start': timestamp_start,
-                'timestamp_end': timestamp_end
             }
+            try:
+                timestamp_start = start['timestamp']
+                timestamp_end = end['timestamp']
+                segment['timestamp_start'] = timestamp_start
+                segment['timestamp_end'] = timestamp_end
+                duration = timestamp_end - timestamp_start
+                try:
+                    duration = duration.seconds
+                except AttributeError:
+                    pass
+                segment['duration'] = duration
+            except KeyError:
+                self.errors.add('No timestamps recorded')
+
             if 'distance' in start and 'distance' in end:
                 segment['distance_recorded_start'] = start['distance']
                 segment['distance_recorded_end'] = end['distance']
@@ -322,74 +365,85 @@ class BikeRide():
             calculating stats
         """
         segments = self.segments
-        if not segments:
-            return 'No segments found'
-        if mask:
-            segments = [sgm for i, sgm in enumerate(segments) if mask[i]]
-        length_calculated = sum([sgm['length_calculated'] for sgm in segments])
-        duration = sum([sgm['duration'] for sgm in segments])
-        try:
-            speed_from_length_calculated = length_calculated / duration
-        except ZeroDivisionError:
-            print('Duration is zero for {}'.format(self.path_ride.name))
-            speed_from_length_calculated = None
-        first_sgm = segments[0]
-        last_sgm = segments[-1]
-        lat_start = first_sgm['lat_start']
-        lon_start = first_sgm['lon_start']
-        direction = self.get_bearing(
-            (lat_start, lon_start), self.median_position
-        )
-        summary = {
-            'filename': self.path_ride.name,
-            'sport': self.sport,
-            'timestamp_start' : first_sgm['timestamp_start'],
-            'timestamp_end': last_sgm['timestamp_end'],
-            'lat_start': lat_start,
-            'lon_start': lon_start,
-            'direction': direction,
-            'length_calculated': length_calculated,
-            'duration': duration,
-            'speed_from_length_calculated': speed_from_length_calculated,
-        }
-        try:
-            length_recorded = sum([sgm['length_recorded'] for sgm in segments])
-            summary['length_recorded'] = length_recorded
-            summary['speed_from_length_recorded'] = length_recorded / duration
-        except KeyError:
-            pass
+        summary = {'filename': self.path_ride.name}
+        if segments:
+            if mask:
+                segments = [sgm for i, sgm in enumerate(segments) if mask[i]]
+            length_calculated = sum(sgm['length_calculated'] for sgm in segments)
+            summary['length_calculated'] = length_calculated
+            try:
+                duration = sum(sgm['duration'] for sgm in segments)
+                summary['duration'] = duration
+                try:
+                    summary['speed_from_length_calculated'] = length_calculated / duration
+                except ZeroDivisionError:
+                    self.errors.add('Duration is zero')
+            except KeyError:
+                pass
+
+            first_sgm = segments[0]
+            last_sgm = segments[-1]
+            summary['lat_start'] = first_sgm['lat_start']
+            summary['lon_start'] = first_sgm['lon_start']
+            summary['direction'] = self.get_bearing(
+                (first_sgm['lat_start'], first_sgm['lon_start']), self.median_position
+            )
+
+            try:
+                summary['timestamp_start'] = first_sgm['timestamp_start']
+                summary['timestamp_end'] = last_sgm['timestamp_end']
+            except KeyError:
+                pass
+
+            try:
+                length_recorded = sum(sgm['length_recorded'] for sgm in segments)
+                summary['length_recorded'] = length_recorded
+                summary['speed_from_length_recorded'] = length_recorded / duration
+            except KeyError:
+                pass
+
+            try:
+                summary['temperature'] = sum(
+                    sgm['temperature'] * sgm['duration'] for sgm in segments
+                ) / duration
+            except KeyError:
+                pass
+            try:
+                summary['wind_speed'] = sum(
+                    sgm['wind_speed'] * sgm['duration'] for sgm in segments
+                ) / duration
+            except KeyError:
+                pass
+            try:
+                summary['wind_direction'] = sum(
+                    sgm['wind_direction'] * sgm['duration'] for sgm in segments
+                ) / duration
+            except KeyError:
+                pass
+            try:
+                summary['total_ascent'] = sum(
+                    sgm['ascent'] for sgm in segments if sgm['ascent'] > 0
+                )
+            except KeyError:
+                pass
+            try:
+                summary['total_descent'] = sum(
+                    sgm['ascent'] for sgm in segments if sgm['ascent'] < 0
+                )
+            except KeyError:
+                pass
+
+        if self.sport:
+            summary['sport'] = self.sport
+
         if self.limits:
             summary['forward'] = self.forward
-        try:
-            summary['temperature'] = sum([
-                sgm['temperature'] * sgm['duration'] for sgm in segments
-            ]) / duration
-        except KeyError:
-            pass
-        try:
-            summary['wind_speed'] = sum([
-                sgm['wind_speed'] * sgm['duration'] for sgm in segments
-            ]) / duration
-        except KeyError:
-            pass
-        try:
-            summary['wind_direction'] = sum([
-                sgm['wind_direction'] * sgm['duration'] for sgm in segments
-            ]) / duration
-        except KeyError:
-            pass
-        try:
-            summary['total_ascent'] = sum(
-                [sgm['ascent'] for sgm in segments if sgm['ascent'] > 0]
-            )
-        except KeyError:
-            pass
-        try:
-            summary['total_descent'] = sum(
-                [sgm['ascent'] for sgm in segments if sgm['ascent'] < 0]
-            )
-        except KeyError:
-            pass
+        if self.errors:
+            summary['errors'] = '; '.join(self.errors)
+        if self.file_type:
+            summary['file_type'] = self.file_type
+        if self.created_by:
+            summary['created_by'] = self.created_by
         if self.additional_vars:
             for var in self.additional_vars:
                 if var not in self.segments[0]:
