@@ -16,9 +16,8 @@ classifiers = [
 keywords = ["cycling", "gps", "gpx", "fit", "garmin"]
 dependencies = [
     'python-dateutil', 'pandas', 'numpy', 'geopy',
-    'fitdecode', 'bs4', 'ipyleaflet'
+    'fitdecode', 'bs4', 'ipyleaflet', requests
 ]
-
 
 [project.urls]
 Homepage = "https://github.com/DIRKMJK/bikeride"
