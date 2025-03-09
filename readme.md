@@ -119,6 +119,8 @@ If you store multiple rides in a list, then you can create a dataframe containin
 from pathlib import Path
 import pandas as pd
 
+DIR_FIT = Path('../data')
+
 rides = [BikeRide(path) for path in DIR_FIT.glob('*.fit')]
 df = pd.DataFrame([ride.summary for ride in rides])
 ```
