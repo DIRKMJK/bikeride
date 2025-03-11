@@ -10,7 +10,7 @@ URL = 'https://www.daggegevens.knmi.nl/klimatologie/uurgegevens'
 RENAME_COLS = {
     '# STN': 'station',
     'YYYYMMDD': 'date',
-    'H': 'hour',
+    'HH': 'hour',
     'DD': 'wind_direction',
     'FH': 'wind_speed_hr',
     'FF': 'wind_speed',
@@ -123,7 +123,7 @@ def process_knmi(text):
     rows = []
     for line in lines:
         if line.startswith('# STN,YYYYMMDD'):
-            colnames = line.split(',')
+            colnames = line.split(',')[:-2]
         if not colnames:
             continue
         if not line.startswith('#'):
